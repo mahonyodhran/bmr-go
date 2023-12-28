@@ -1,28 +1,40 @@
 package main
 
 import (
-	"html/template"
+	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 func main() {
-	h1 := func(w http.ResponseWriter, r *http.Request) {
-		tmpl := template.Must(template.ParseFiles("index.html"))
-		tmpl.Execute(w, nil)
-	}
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "index.html")
+	})
 
-	h2 := func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/", http.StatusMovedPermanently)
-	}
+	http.HandleFunc("/calculate", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Redirect(w, r, "/", http.StatusMovedPermanently)
+			return
+		}
 
-	http.HandleFunc("/", h1)
-	http.HandleFunc("/calculate/", h2)
+		age, _ := strconv.Atoi(r.FormValue("age"))
+		weight, _ := strconv.ParseFloat(r.FormValue("weight"), 64)
+		height, _ := strconv.Atoi(r.FormValue("height"))
+		gender := r.FormValue("gender")
+
+		bmr := mifflin_st_jeor(age, weight, height, gender)
+		fmt.Fprintf(w, "Your BMR is: %d", bmr)
+	})
 
 	log.Println("App starting...")
 	log.Fatal(http.ListenAndServe(":8008", nil))
 }
 
-func calculateBMR() int {
-	return 0
+func mifflin_st_jeor(age int, weight float64, height int, gender string) int {
+	if gender == "male" {
+		return int((10 * weight) + (6.25 * float64(height)) - (5 * float64(age)) + 5)
+	} else {
+		return int((10 * weight) + (6.25 * float64(height)) - (5 * float64(age)) - 161)
+	}
 }
